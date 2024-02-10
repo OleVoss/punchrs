@@ -1,6 +1,6 @@
 time_format = "%T"
 date_format = "%F"
-app_path = "C:/Users/olevo/AppData/Local/punchrs"
+app_path = "C:/<path_to>/punchrs"
 break_min = 30
 work_hours_month= 30
 [work_hours]
