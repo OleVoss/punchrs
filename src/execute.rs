@@ -1,5 +1,6 @@
 use anyhow::Result;
+use crate::Config;
 
 pub trait Execute {
-    fn execute(&self) -> Result<()>;
+    fn execute(&self, config: Config) -> Result<()>;
 }
