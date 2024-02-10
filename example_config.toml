@@ -1,0 +1,10 @@
+time_format = "%T"
+date_format = "%F"
+app_path = "C:/Users/olevo/AppData/Local/punchrs"
+break_min = 30
+work_hours_month= 30
+[work_hours]
+monday= 8
+tuesday= 8
+wednesday= 8
+thurday= 6
