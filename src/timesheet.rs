@@ -65,13 +65,14 @@ impl Timesheet {
         return wtr;
     }
 
-    pub fn write_today_in(&self, in_time: &str) -> Result<(), csv::Error> {
+    pub fn write_today_in(&self, in_time: &str, workinghours: f64) -> Result<(), csv::Error> {
         if let Ok(mut records) = self.get_records() {
             let mut wtr = self.get_wtr()?;
             let date = chrono::Local::now().date_naive();
             for mut record in &mut records {
                 if chrono::NaiveDate::from_str(&*record.date) == Ok(date) {
                     record.in_time = in_time.to_string();
+                    record.workinghours = workinghours;
                 }
                 wtr.serialize(record)?;
             }
@@ -79,14 +80,15 @@ impl Timesheet {
         Ok(())
     }
 
-    pub fn write_today_out(&self, out_time: &str) -> Result<(), csv::Error> {
+    pub fn write_today_out(&self, out_time: &str, break_minutes: i32) -> Result<(), csv::Error> {
         if let Ok(mut records) = self.get_records() {
             let mut wtr = self.get_wtr()?;
             let date = chrono::Local::now().date_naive();
             for mut record in &mut records {
                 if chrono::NaiveDate::from_str(&*record.date) == Ok(date) {
                     record.out_time = out_time.to_string();
-                    record.hours = self.calc_worked_time(&record.in_time, &record.out_time);
+                    record.hours = self.calc_worked_time(&record.in_time, &record.out_time)
+                        - break_minutes as f64 / 60.;
                 }
                 wtr.serialize(record)?;
             }

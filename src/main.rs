@@ -2,18 +2,18 @@ mod commands;
 mod execute;
 mod timesheet;
 
+use anyhow::Result;
+use clap::Parser;
+use commands::PunchDirection;
+use directories::BaseDirs;
+use execute::Execute;
+use log::log;
+use serde::{Deserialize, Deserializer};
 use std::env::join_paths;
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::io;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use anyhow::Result;
-use clap::Parser;
-use directories::BaseDirs;
-use commands::PunchDirection;
-use execute::Execute;
-use log::log;
-use serde::{Deserialize, Deserializer};
 
 // TODO: Anyhow error handling, but in good
 
@@ -26,7 +26,7 @@ struct Cli {
     command: PunchDirection,
 }
 
-#[derive(Default, Deserialize, Debug)]
+#[derive(Clone, Default, Deserialize, Debug)]
 struct Config {
     time_format: String,
     date_format: String,
@@ -36,23 +36,42 @@ struct Config {
     work_hours_month: i32,
 }
 
-#[derive(Deserialize, Default, Debug)]
+#[derive(Deserialize, Default, Debug, Clone, Copy)]
 struct WorkdayHours {
-    monday: Option<i32>,
-    tuesday: Option<i32>,
-    wednesday: Option<i32>,
-    thursday: Option<i32>,
-    friday: Option<i32>,
-    saturday: Option<i32>,
-    sunday: Option<i32>,
+    monday: Option<f64>,
+    tuesday: Option<f64>,
+    wednesday: Option<f64>,
+    thursday: Option<f64>,
+    friday: Option<f64>,
+    saturday: Option<f64>,
+    sunday: Option<f64>,
+}
+
+impl WorkdayHours {
+    pub fn get(&self, weekday: &str) -> Option<f64> {
+        match weekday {
+            "Mon" => self.monday,
+            "Tue" => self.tuesday,
+            "Wed" => self.wednesday,
+            "Thu" => self.thursday,
+            "Fri" => self.friday,
+            "Sat" => self.saturday,
+            "Sun" => self.sunday,
+            _ => None,
+        }
+    }
 }
 
 fn get_config(path: PathBuf) -> Result<Config, anyhow::Error> {
-    let mut config_file = OpenOptions::new().write(true).read(true).create(true).open(path)?;
+    let mut config_file = OpenOptions::new()
+        .write(true)
+        .read(true)
+        .create(true)
+        .open(path)?;
     let mut config_content = String::new();
     config_file.read_to_string(&mut config_content)?;
     let config: Config = toml::from_str(&config_content)?;
-    return Ok(config)
+    return Ok(config);
 }
 
 fn main() -> Result<()> {
@@ -64,7 +83,10 @@ fn main() -> Result<()> {
     // config check
     // TODO: extract check and retrieval into single method
     if !config_path.exists() {
-        print!("{} does not exists. \nCreate new config? (y/N): ", config_path.display());
+        print!(
+            "{} does not exists. \nCreate new config? (y/N): ",
+            config_path.display()
+        );
         io::stdout().flush()?;
 
         let mut user_choice = String::new();
@@ -73,10 +95,10 @@ fn main() -> Result<()> {
                 if user_choice.chars().next() == Some('y') {
                     create_dir_all(config_path).expect("Error creating the directory.");
                 } else {
-                    return Ok(())
+                    return Ok(());
                 }
             }
-            Err(_) => return Ok(())
+            Err(_) => return Ok(()),
         }
     }
     let config = get_config(dir.config_local_dir().join(Path::new(CONFIG_FILE_NAME)))?;
@@ -89,7 +111,10 @@ fn main() -> Result<()> {
 
 fn check_timesheet(timesheet_path: PathBuf) -> anyhow::Result<()> {
     if !timesheet_path.exists() {
-        print!("{} does not exist. Create file? (y/N): ", timesheet_path.display());
+        print!(
+            "{} does not exist. Create file? (y/N): ",
+            timesheet_path.display()
+        );
         io::stdout().flush()?;
 
         let mut user_choice = String::new();
@@ -102,10 +127,9 @@ fn check_timesheet(timesheet_path: PathBuf) -> anyhow::Result<()> {
                     Ok(())
                 }
             }
-            Err(e) => Err(anyhow::Error::from(e))
+            Err(e) => Err(anyhow::Error::from(e)),
         }
     } else {
         Ok(())
     }
 }
-
