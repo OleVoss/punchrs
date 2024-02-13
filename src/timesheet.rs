@@ -1,12 +1,12 @@
-use std::fs::File;
-use std::path::PathBuf;
-use std::str::FromStr;
+use crate::commands::PunchDirection;
+use crate::Config;
 use chrono::{Datelike, Timelike};
 use clap::Parser;
 use csv::{Reader, ReaderBuilder, Terminator, Writer, WriterBuilder};
 use serde::{Deserialize, Serialize};
-use crate::commands::PunchDirection;
-
+use std::fs::File;
+use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Record {
@@ -14,37 +14,37 @@ pub struct Record {
     weekday: String,
     in_time: String,
     out_time: String,
-    hours: i64,
+    workinghours: f64,
+    hours: f64,
 }
 
 pub struct Timesheet {
     timesheet_path: PathBuf,
-    date_format: String,
-    time_format: String,
+    config: Config,
 }
 
 impl Timesheet {
-    pub fn new(timesheet_path: PathBuf, date_format: String, time_format: String) -> Self {
+    pub fn new(timesheet_path: PathBuf, config: Config) -> Self {
         Self {
             timesheet_path,
-            date_format,
-            time_format
+            config,
         }
     }
     fn get_records(&self) -> Result<Vec<Record>, anyhow::Error> {
         let mut rdr = self.get_rdr()?;
         let records: Vec<Record> = rdr.deserialize().map(|r| r.unwrap()).collect();
         if records.len() > 0 {
-            return Ok(records)
+            return Ok(records);
         }
 
         let date = chrono::Local::now().date_naive();
         Ok(vec![Record {
-            date: date.format(&*self.date_format).to_string(),
+            date: date.format(&*self.config.date_format).to_string(),
             weekday: date.weekday().to_string(),
             in_time: "".to_string(),
             out_time: "".to_string(),
-            hours: 0,
+            workinghours: 0.0,
+            hours: 0.0,
         }])
     }
 
@@ -53,7 +53,7 @@ impl Timesheet {
             .has_headers(false)
             .delimiter(b';')
             .from_path(&self.timesheet_path);
-        return rdr
+        return rdr;
     }
 
     fn get_wtr(&self) -> csv::Result<Writer<File>> {
@@ -62,7 +62,7 @@ impl Timesheet {
             .delimiter(b';')
             .terminator(Terminator::CRLF)
             .from_path(&self.timesheet_path);
-        return wtr
+        return wtr;
     }
 
     pub fn write_today_in(&self, in_time: &str) -> Result<(), csv::Error> {
@@ -87,7 +87,6 @@ impl Timesheet {
                 if chrono::NaiveDate::from_str(&*record.date) == Ok(date) {
                     record.out_time = out_time.to_string();
                     record.hours = self.calc_worked_time(&record.in_time, &record.out_time);
-
                 }
                 wtr.serialize(record)?;
             }
@@ -95,11 +94,10 @@ impl Timesheet {
         Ok(())
     }
 
-    fn calc_worked_time(&self, in_time: &str, out_time: &str) -> i64 {
+    fn calc_worked_time(&self, in_time: &str, out_time: &str) -> f64 {
         let in_naivetime = chrono::NaiveTime::from_str(in_time).unwrap();
         let out_naivetime = chrono::NaiveTime::from_str(out_time).unwrap();
 
-        return (out_naivetime - in_naivetime).num_minutes()
+        (out_naivetime - in_naivetime).num_minutes() as f64 / 60.0
     }
 }
-
