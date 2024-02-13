@@ -70,9 +70,10 @@ impl Timesheet {
 
     pub fn write_today_in(&self, in_time: &str, workinghours: f64) -> Result<(), csv::Error> {
         if let Ok(mut records) = self.get_records() {
+            records.reverse();
             let mut wtr = self.get_wtr()?;
             let date = chrono::Local::now().date_naive();
-            for mut record in &mut records {
+            for mut record in records {
                 if chrono::NaiveDate::from_str(&*record.date) == Ok(date) {
                     record.in_time = in_time.to_string();
                     record.workinghours = workinghours;
