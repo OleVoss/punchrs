@@ -32,20 +32,23 @@ impl Timesheet {
     }
     fn get_records(&self) -> Result<Vec<Record>, anyhow::Error> {
         let mut rdr = self.get_rdr()?;
-        let records: Vec<Record> = rdr.deserialize().map(|r| r.unwrap()).collect();
-        if records.len() > 0 {
+        let mut records: Vec<Record> = rdr.deserialize().map(|r| r.unwrap()).collect();
+        if records
+            .iter()
+            .any(|r| r.date == chrono::Local::now().date_naive().format("%F").to_string())
+        {
             return Ok(records);
         }
-
         let date = chrono::Local::now().date_naive();
-        Ok(vec![Record {
+        records.push(Record {
             date: date.format(&*self.config.date_format).to_string(),
             weekday: date.weekday().to_string(),
             in_time: "".to_string(),
             out_time: "".to_string(),
             workinghours: 0.0,
             hours: 0.0,
-        }])
+        });
+        Ok(records)
     }
 
     fn get_rdr(&self) -> csv::Result<Reader<File>> {
