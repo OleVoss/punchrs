@@ -1,7 +1,6 @@
-use crate::{get_config, Config};
+use crate::Config;
 use chrono::{prelude::*, TimeDelta};
 use clap::{Args, Subcommand};
-use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use crate::execute::Execute;

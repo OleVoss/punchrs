@@ -1,7 +1,5 @@
-use crate::commands::PunchDirection;
 use crate::Config;
-use chrono::{Datelike, Timelike};
-use clap::Parser;
+use chrono::Datelike;
 use csv::{Reader, ReaderBuilder, Terminator, Writer, WriterBuilder};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -52,7 +50,7 @@ impl Timesheet {
     }
 
     fn get_rdr(&self) -> csv::Result<Reader<File>> {
-        let mut rdr = ReaderBuilder::new()
+        let rdr = ReaderBuilder::new()
             .has_headers(false)
             .delimiter(b';')
             .from_path(&self.timesheet_path);
@@ -60,7 +58,7 @@ impl Timesheet {
     }
 
     fn get_wtr(&self) -> csv::Result<Writer<File>> {
-        let mut wtr = WriterBuilder::new()
+        let wtr = WriterBuilder::new()
             .has_headers(false)
             .delimiter(b';')
             .terminator(Terminator::CRLF)
@@ -88,7 +86,7 @@ impl Timesheet {
         if let Ok(mut records) = self.get_records() {
             let mut wtr = self.get_wtr()?;
             let date = chrono::Local::now().date_naive();
-            for mut record in &mut records {
+            for record in &mut records {
                 if chrono::NaiveDate::from_str(&*record.date) == Ok(date) {
                     record.out_time = out_time.to_string();
                     record.hours = self.calc_worked_time(&record.in_time, &record.out_time)
