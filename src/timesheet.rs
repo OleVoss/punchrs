@@ -1,5 +1,5 @@
 use crate::Config;
-use chrono::Datelike;
+use chrono::{Datelike, Local, NaiveDate};
 use csv::{Reader, ReaderBuilder, Terminator, Writer, WriterBuilder};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -8,12 +8,18 @@ use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Record {
-    date: String,
-    weekday: String,
-    in_time: String,
-    out_time: String,
-    workinghours: f64,
-    hours: f64,
+    pub date: String,
+    pub weekday: String,
+    pub in_time: String,
+    pub out_time: String,
+    pub workinghours: f64,
+    pub hours: f64,
+}
+
+impl Record {
+    pub fn naive_date(&self) -> NaiveDate {
+        return chrono::NaiveDate::from_str(&self.date).unwrap();
+    }
 }
 
 pub struct Timesheet {
@@ -28,7 +34,7 @@ impl Timesheet {
             config,
         }
     }
-    fn get_records(&self) -> Result<Vec<Record>, anyhow::Error> {
+    pub fn get_records(&self) -> Result<Vec<Record>, anyhow::Error> {
         let mut rdr = self.get_rdr()?;
         let mut records: Vec<Record> = rdr.deserialize().map(|r| r.unwrap()).collect();
         if records
@@ -67,8 +73,7 @@ impl Timesheet {
     }
 
     pub fn write_today_in(&self, in_time: &str, workinghours: f64) -> Result<(), csv::Error> {
-        if let Ok(mut records) = self.get_records() {
-            records.reverse();
+        if let Ok(records) = self.get_records() {
             let mut wtr = self.get_wtr()?;
             let date = chrono::Local::now().date_naive();
             for mut record in records {
