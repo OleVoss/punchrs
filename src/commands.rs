@@ -10,6 +10,7 @@ use crate::timesheet::Timesheet;
 pub enum PunchDirection {
     In(PunchArgs),
     Out(PunchArgs),
+    Print,
 }
 
 #[derive(Args, Clone)]
@@ -31,6 +32,11 @@ impl Execute for PunchDirection {
             PunchDirection::Out(args) => {
                 let timesheet_manager = Timesheet::new(config.app_path.join("timesheet.csv"), config.date_format, config.time_format);
                 timesheet_manager.write_today_out(args.time.as_str())?;
+                Ok(())
+            }
+            PunchDirection::Print => {
+                let timesheet_manager = Timesheet::new(config.app_path.join("timesheet.csv"), config.date_format, config.time_format);
+                timesheet_manager.print_records();
                 Ok(())
             }
         }

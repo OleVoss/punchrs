@@ -5,10 +5,11 @@ use chrono::{Datelike, Timelike};
 use clap::Parser;
 use csv::{Reader, ReaderBuilder, Terminator, Writer, WriterBuilder};
 use serde::{Deserialize, Serialize};
+use tabled::{Table, Tabled};
 use crate::commands::PunchDirection;
 
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Tabled)]
 pub struct Record {
     date: String,
     weekday: String,
@@ -31,6 +32,13 @@ impl Timesheet {
             time_format
         }
     }
+
+    pub fn print_records(&self) {
+        let records = self.get_records().unwrap();
+        let table = Table::new(records).to_string();
+        println!("{}", table);
+    }
+
     fn get_records(&self) -> Result<Vec<Record>, anyhow::Error> {
         let mut rdr = self.get_rdr()?;
         let records: Vec<Record> = rdr.deserialize().map(|r| r.unwrap()).collect();
