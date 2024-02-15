@@ -8,18 +8,21 @@ use crate::timesheet::Timesheet;
 
 #[derive(Subcommand)]
 pub enum PunchDirection {
+    #[command(about="Punch in for today")]
     In(PunchArgs),
+    #[command(about="Punch out for today")]
     Out(PunchArgs),
+    #[command(about="Displays a table with all entries in your .csv file")]
     Print,
 }
 
 #[derive(Args, Clone)]
 pub struct PunchArgs {
-    #[arg(required = true)]
+    #[arg(required = true, help="Time to save. (e.g. 8:00)")]
     time: String,
-    #[arg(short, long)]
+    #[arg(short, long, help="Set a custom date. (e.g. 04.12.24)")]
     date: Option<String>,
-    #[arg(short, long)]
+    #[arg(short, long, help="Set a custom target time for the entry.")]
     workinghours: Option<f64>,
 }
 
@@ -58,7 +61,7 @@ impl Execute for PunchDirection {
                 Ok(())
             }
             PunchDirection::Print => {
-                let timesheet_manager = Timesheet::new(config.app_path.join("timesheet.csv"), config.date_format, config.time_format);
+                let timesheet_manager = Timesheet::new(config.app_path.join("timesheet.csv"), config);
                 timesheet_manager.print_records();
                 Ok(())
             }
