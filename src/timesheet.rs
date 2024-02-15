@@ -1,3 +1,4 @@
+use crate::Config;
 use std::fs::File;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -15,21 +16,20 @@ pub struct Record {
     weekday: String,
     in_time: String,
     out_time: String,
-    hours: i64,
+    workinghours: f64,
+    hours: f64,
 }
 
 pub struct Timesheet {
     timesheet_path: PathBuf,
-    date_format: String,
-    time_format: String,
+    config: Config,
 }
 
 impl Timesheet {
-    pub fn new(timesheet_path: PathBuf, date_format: String, time_format: String) -> Self {
+    pub fn new(timesheet_path: PathBuf, config: Config) -> Self {
         Self {
             timesheet_path,
-            date_format,
-            time_format
+            config,
         }
     }
 
@@ -41,45 +41,51 @@ impl Timesheet {
 
     fn get_records(&self) -> Result<Vec<Record>, anyhow::Error> {
         let mut rdr = self.get_rdr()?;
-        let records: Vec<Record> = rdr.deserialize().map(|r| r.unwrap()).collect();
-        if records.len() > 0 {
-            return Ok(records)
+        let mut records: Vec<Record> = rdr.deserialize().map(|r| r.unwrap()).collect();
+        if records
+            .iter()
+            .any(|r| r.date == chrono::Local::now().date_naive().format("%F").to_string())
+        {
+            return Ok(records);
         }
-
         let date = chrono::Local::now().date_naive();
-        Ok(vec![Record {
-            date: date.format(&*self.date_format).to_string(),
+        records.push(Record {
+            date: date.format(&*self.config.date_format).to_string(),
             weekday: date.weekday().to_string(),
             in_time: "".to_string(),
             out_time: "".to_string(),
-            hours: 0,
-        }])
+            workinghours: 0.0,
+            hours: 0.0,
+        });
+        Ok(records)
     }
 
     fn get_rdr(&self) -> csv::Result<Reader<File>> {
-        let mut rdr = ReaderBuilder::new()
+        let rdr = ReaderBuilder::new()
             .has_headers(false)
             .delimiter(b';')
             .from_path(&self.timesheet_path);
-        return rdr
+        return rdr;
     }
 
     fn get_wtr(&self) -> csv::Result<Writer<File>> {
-        let mut wtr = WriterBuilder::new()
+        let wtr = WriterBuilder::new()
             .has_headers(false)
             .delimiter(b';')
             .terminator(Terminator::CRLF)
             .from_path(&self.timesheet_path);
-        return wtr
+        return wtr;
     }
 
-    pub fn write_today_in(&self, in_time: &str) -> Result<(), csv::Error> {
+    pub fn write_today_in(&self, in_time: &str, workinghours: f64) -> Result<(), csv::Error> {
         if let Ok(mut records) = self.get_records() {
+            records.reverse();
             let mut wtr = self.get_wtr()?;
             let date = chrono::Local::now().date_naive();
-            for mut record in &mut records {
+            for mut record in records {
                 if chrono::NaiveDate::from_str(&*record.date) == Ok(date) {
                     record.in_time = in_time.to_string();
+                    record.workinghours = workinghours;
                 }
                 wtr.serialize(record)?;
             }
@@ -87,15 +93,15 @@ impl Timesheet {
         Ok(())
     }
 
-    pub fn write_today_out(&self, out_time: &str) -> Result<(), csv::Error> {
+    pub fn write_today_out(&self, out_time: &str, break_minutes: i32) -> Result<(), csv::Error> {
         if let Ok(mut records) = self.get_records() {
             let mut wtr = self.get_wtr()?;
             let date = chrono::Local::now().date_naive();
-            for mut record in &mut records {
+            for record in &mut records {
                 if chrono::NaiveDate::from_str(&*record.date) == Ok(date) {
                     record.out_time = out_time.to_string();
-                    record.hours = self.calc_worked_time(&record.in_time, &record.out_time);
-
+                    record.hours = self.calc_worked_time(&record.in_time, &record.out_time)
+                        - break_minutes as f64 / 60.;
                 }
                 wtr.serialize(record)?;
             }
@@ -103,11 +109,11 @@ impl Timesheet {
         Ok(())
     }
 
-    fn calc_worked_time(&self, in_time: &str, out_time: &str) -> i64 {
+    fn calc_worked_time(&self, in_time: &str, out_time: &str) -> f64 {
         let in_naivetime = chrono::NaiveTime::from_str(in_time).unwrap();
         let out_naivetime = chrono::NaiveTime::from_str(out_time).unwrap();
 
-        return (out_naivetime - in_naivetime).num_minutes()
+        (out_naivetime - in_naivetime).num_minutes() as f64 / 60.0
     }
 }
 
