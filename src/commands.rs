@@ -1,29 +1,37 @@
 use crate::Config;
-use chrono::{prelude::*, TimeDelta};
+use chrono::{prelude::*, Duration, TimeDelta};
 use clap::{Args, Subcommand};
 use std::str::FromStr;
+use toml::value::Time;
 
 use crate::execute::Execute;
-use crate::timesheet::Timesheet;
+use crate::timesheet::{Record, Timesheet};
 
 #[derive(Subcommand)]
 pub enum PunchDirection {
-    #[command(about="Punch in for today")]
+    #[command(about = "Punch in for today")]
     In(PunchArgs),
-    #[command(about="Punch out for today")]
+    #[command(about = "Punch out for today")]
     Out(PunchArgs),
-    #[command(about="Displays a table with all entries in your .csv file")]
+    Stats(StatsArgs),
+    #[command(about = "Displays a table with all entries in your .csv file")]
     Print,
 }
 
 #[derive(Args, Clone)]
 pub struct PunchArgs {
-    #[arg(required = true, help="Time to save. (e.g. 8:00)")]
+    #[arg(required = true, help = "Time to save. (e.g. 8:00)")]
     time: String,
-    #[arg(short, long, help="Set a custom date. (e.g. 04.12.24)")]
+    #[arg(short, long, help = "Set a custom date. (e.g. 04.12.24)")]
     date: Option<String>,
-    #[arg(short, long, help="Set a custom target time for the entry.")]
+    #[arg(short, long, help = "Set a custom target time for the entry.")]
     workinghours: Option<f64>,
+}
+
+#[derive(Args, Clone)]
+pub struct StatsArgs {
+    #[arg(short, long)]
+    month: Option<String>,
 }
 
 impl Execute for PunchDirection {
@@ -58,11 +66,6 @@ impl Execute for PunchDirection {
                 let timesheet_manager =
                     Timesheet::new(config.app_path.join("timesheet.csv"), config);
                 timesheet_manager.write_today_out(args.time.as_str(), break_minutes)?;
-                Ok(())
-            }
-            PunchDirection::Print => {
-                let timesheet_manager = Timesheet::new(config.app_path.join("timesheet.csv"), config);
-                timesheet_manager.print_records();
                 Ok(())
             }
         }
