@@ -14,6 +14,8 @@ pub enum PunchDirection {
     #[command(about = "Punch out for today")]
     Out(PunchArgs),
     Stats(StatsArgs),
+    #[command(about = "Print when you have to leave today")]
+    When,
     #[command(about = "Displays a table with all entries in your .csv file")]
     Print,
 }
@@ -68,6 +70,11 @@ impl Execute for PunchDirection {
                 timesheet_manager.write_today_out(args.time.as_str(), break_minutes)?;
                 Ok(())
             }
+            PunchDirection::Stats(_) => todo!(),
+            PunchDirection::When => {
+                
+            },
+            PunchDirection::Print => todo!(),
         }
     }
 }
