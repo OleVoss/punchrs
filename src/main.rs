@@ -1,14 +1,24 @@
 mod cli;
 mod timesheet;
+mod tui;
 
 use anyhow::Result;
 use clap::Parser;
 use cli::execute::Execute;
 use cli::Cli;
+use crossterm::event::{KeyCode, KeyEventKind};
+use crossterm::terminal::{
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+};
+use crossterm::{event, ExecutableCommand};
 use directories::BaseDirs;
+use ratatui::backend::CrosstermBackend;
+use ratatui::style::Stylize;
+use ratatui::widgets::Paragraph;
+use ratatui::Terminal;
 use serde::Deserialize;
 use std::fs::{create_dir_all, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{stdout, Read, Write};
 use std::path::{Path, PathBuf};
 use std::{env, io};
 use timesheet::check_timesheet;
@@ -99,7 +109,36 @@ fn main() -> Result<()> {
 
         cli.command.execute(config)?;
     } else {
-        println!("tui mode");
+        stdout().execute(EnterAlternateScreen)?;
+        enable_raw_mode()?;
+        let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
+        terminal.clear()?;
+
+        loop {
+            // draw
+            terminal.draw(|frame| {
+                let area = frame.size();
+                frame.render_widget(
+                    Paragraph::new("Hello Ratatui! (press 'q' to quit)")
+                        .white()
+                        .on_blue(),
+                    area,
+                );
+            })?;
+
+            // handle events
+            if event::poll(std::time::Duration::from_millis(16))? {
+                if let event::Event::Key(key) = event::read()? {
+                    if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // cleanup
+        stdout().execute(LeaveAlternateScreen)?;
+        disable_raw_mode()?;
     }
     Ok(())
 }
