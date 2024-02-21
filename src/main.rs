@@ -22,6 +22,7 @@ use std::io::{stdout, Read, Write};
 use std::path::{Path, PathBuf};
 use std::{env, io};
 use timesheet::check_timesheet;
+use tui::app;
 
 // TODO: Anyhow error handling, but in good
 
@@ -76,69 +77,40 @@ fn get_config(path: PathBuf) -> Result<Config, anyhow::Error> {
 }
 
 fn main() -> Result<()> {
+    let dir = BaseDirs::new().unwrap();
+    let config_path = dir.config_local_dir().join("punchrs");
+
+    // config check
+    // TODO: extract check and retrieval into single method
+    if !config_path.exists() {
+        print!(
+            "{} does not exists. \nCreate new config? (y/N): ",
+            config_path.display()
+        );
+        io::stdout().flush()?;
+
+        let mut user_choice = String::new();
+        match io::stdin().read_line(&mut user_choice) {
+            Ok(_) => {
+                if user_choice.chars().next() == Some('y') {
+                    create_dir_all(config_path).expect("Error creating the directory.");
+                } else {
+                    return Ok(());
+                }
+            }
+            Err(_) => return Ok(()),
+        }
+    }
+    let config = get_config(dir.config_local_dir().join(Path::new(CONFIG_FILE_NAME)))?;
+    let timesheet_path = config.app_path.join("timesheet.csv");
+    check_timesheet(timesheet_path)?;
+
     if env::args().count() > 1 {
         let cli = Cli::parse();
-
-        let dir = BaseDirs::new().unwrap();
-        let config_path = dir.config_local_dir().join("punchrs");
-
-        // config check
-        // TODO: extract check and retrieval into single method
-        if !config_path.exists() {
-            print!(
-                "{} does not exists. \nCreate new config? (y/N): ",
-                config_path.display()
-            );
-            io::stdout().flush()?;
-
-            let mut user_choice = String::new();
-            match io::stdin().read_line(&mut user_choice) {
-                Ok(_) => {
-                    if user_choice.chars().next() == Some('y') {
-                        create_dir_all(config_path).expect("Error creating the directory.");
-                    } else {
-                        return Ok(());
-                    }
-                }
-                Err(_) => return Ok(()),
-            }
-        }
-        let config = get_config(dir.config_local_dir().join(Path::new(CONFIG_FILE_NAME)))?;
-        let timesheet_path = config.app_path.join("timesheet.csv");
-        check_timesheet(timesheet_path)?;
-
         cli.command.execute(config)?;
     } else {
-        stdout().execute(EnterAlternateScreen)?;
-        enable_raw_mode()?;
-        let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
-        terminal.clear()?;
-
-        loop {
-            // draw
-            terminal.draw(|frame| {
-                let area = frame.size();
-                frame.render_widget(
-                    Paragraph::new("Hello Ratatui! (press 'q' to quit)")
-                        .white()
-                        .on_blue(),
-                    area,
-                );
-            })?;
-
-            // handle events
-            if event::poll(std::time::Duration::from_millis(16))? {
-                if let event::Event::Key(key) = event::read()? {
-                    if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                        break;
-                    }
-                }
-            }
-        }
-
-        // cleanup
-        stdout().execute(LeaveAlternateScreen)?;
-        disable_raw_mode()?;
+        let mut app = app::PunchrsApp::new(config);
+        app.start()?;
     }
     Ok(())
 }
