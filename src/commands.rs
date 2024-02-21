@@ -65,7 +65,7 @@ impl Execute for PunchDirection {
                 Ok(())
             }
             PunchDirection::Stats(args) => {
-                println!("preparing statistics...");
+                println!("preparing working statistics...");
                 let date = match &args.month {
                     Some(m) => chrono::Local::now()
                         .with_month(m.parse().unwrap_or(1))
