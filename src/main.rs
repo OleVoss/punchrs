@@ -9,9 +9,9 @@ use directories::BaseDirs;
 use execute::Execute;
 use serde::Deserialize;
 use std::fs::{create_dir_all, File, OpenOptions};
-use std::io;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::{env, io};
 
 // TODO: Anyhow error handling, but in good
 
@@ -73,37 +73,41 @@ fn get_config(path: PathBuf) -> Result<Config, anyhow::Error> {
 }
 
 fn main() -> Result<()> {
-    let cli = Cli::parse();
+    if env::args().count() > 1 {
+        let cli = Cli::parse();
 
-    let dir = BaseDirs::new().unwrap();
-    let config_path = dir.config_local_dir().join("punchrs");
+        let dir = BaseDirs::new().unwrap();
+        let config_path = dir.config_local_dir().join("punchrs");
 
-    // config check
-    // TODO: extract check and retrieval into single method
-    if !config_path.exists() {
-        print!(
-            "{} does not exists. \nCreate new config? (y/N): ",
-            config_path.display()
-        );
-        io::stdout().flush()?;
+        // config check
+        // TODO: extract check and retrieval into single method
+        if !config_path.exists() {
+            print!(
+                "{} does not exists. \nCreate new config? (y/N): ",
+                config_path.display()
+            );
+            io::stdout().flush()?;
 
-        let mut user_choice = String::new();
-        match io::stdin().read_line(&mut user_choice) {
-            Ok(_) => {
-                if user_choice.chars().next() == Some('y') {
-                    create_dir_all(config_path).expect("Error creating the directory.");
-                } else {
-                    return Ok(());
+            let mut user_choice = String::new();
+            match io::stdin().read_line(&mut user_choice) {
+                Ok(_) => {
+                    if user_choice.chars().next() == Some('y') {
+                        create_dir_all(config_path).expect("Error creating the directory.");
+                    } else {
+                        return Ok(());
+                    }
                 }
+                Err(_) => return Ok(()),
             }
-            Err(_) => return Ok(()),
         }
-    }
-    let config = get_config(dir.config_local_dir().join(Path::new(CONFIG_FILE_NAME)))?;
-    let timesheet_path = config.app_path.join("timesheet.csv");
-    check_timesheet(timesheet_path)?;
+        let config = get_config(dir.config_local_dir().join(Path::new(CONFIG_FILE_NAME)))?;
+        let timesheet_path = config.app_path.join("timesheet.csv");
+        check_timesheet(timesheet_path)?;
 
-    cli.command.execute(config)?;
+        cli.command.execute(config)?;
+    } else {
+        println!("tui mode");
+    }
     Ok(())
 }
 
