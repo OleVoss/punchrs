@@ -1,28 +1,21 @@
-mod commands;
-mod execute;
+mod cli;
 mod timesheet;
 
 use anyhow::Result;
 use clap::Parser;
-use commands::PunchDirection;
+use cli::execute::Execute;
+use cli::Cli;
 use directories::BaseDirs;
-use execute::Execute;
 use serde::Deserialize;
-use std::fs::{create_dir_all, File, OpenOptions};
+use std::fs::{create_dir_all, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::{env, io};
+use timesheet::check_timesheet;
 
 // TODO: Anyhow error handling, but in good
 
 const CONFIG_FILE_NAME: &str = "punchrs/config.toml";
-
-#[derive(Parser)]
-#[command(version, about, long_about = None)]
-struct Cli {
-    #[command(subcommand)]
-    command: PunchDirection,
-}
 
 #[derive(Clone, Default, Deserialize, Debug)]
 struct Config {
@@ -109,29 +102,4 @@ fn main() -> Result<()> {
         println!("tui mode");
     }
     Ok(())
-}
-
-fn check_timesheet(timesheet_path: PathBuf) -> anyhow::Result<()> {
-    if !timesheet_path.exists() {
-        print!(
-            "{} does not exist. Create file? (y/N): ",
-            timesheet_path.display()
-        );
-        io::stdout().flush()?;
-
-        let mut user_choice = String::new();
-        match io::stdin().read_line(&mut user_choice) {
-            Ok(_) => {
-                if user_choice.chars().next() == Some('y') {
-                    File::create(timesheet_path)?;
-                    Ok(())
-                } else {
-                    Ok(())
-                }
-            }
-            Err(e) => Err(anyhow::Error::from(e)),
-        }
-    } else {
-        Ok(())
-    }
 }

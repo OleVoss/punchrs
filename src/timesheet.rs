@@ -1,13 +1,12 @@
-use crate::commands::PunchDirection;
 use crate::Config;
-use chrono::{Datelike, Local, NaiveDate, Timelike};
-use clap::Parser;
+use chrono::{Datelike, NaiveDate};
 use csv::{Reader, ReaderBuilder, Terminator, Writer, WriterBuilder};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
+use std::io::{self, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
-use tabled::{Table, Tabled};
+use tabled::Tabled;
 
 #[derive(Debug, Serialize, Deserialize, Tabled)]
 pub struct Record {
@@ -111,5 +110,30 @@ impl Timesheet {
         let out_naivetime = chrono::NaiveTime::from_str(out_time).unwrap();
 
         (out_naivetime - in_naivetime).num_minutes() as f64 / 60.0
+    }
+}
+
+pub fn check_timesheet(timesheet_path: PathBuf) -> anyhow::Result<()> {
+    if !timesheet_path.exists() {
+        print!(
+            "{} does not exist. Create file? (y/N): ",
+            timesheet_path.display()
+        );
+        io::stdout().flush()?;
+
+        let mut user_choice = String::new();
+        match io::stdin().read_line(&mut user_choice) {
+            Ok(_) => {
+                if user_choice.chars().next() == Some('y') {
+                    File::create(timesheet_path)?;
+                    Ok(())
+                } else {
+                    Ok(())
+                }
+            }
+            Err(e) => Err(anyhow::Error::from(e)),
+        }
+    } else {
+        Ok(())
     }
 }
