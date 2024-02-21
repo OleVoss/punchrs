@@ -37,7 +37,7 @@ impl Timesheet {
             config,
         }
     }
-    fn get_records(&self) -> Result<Vec<Record>, anyhow::Error> {
+    pub fn get_records(&self) -> Result<Vec<Record>, anyhow::Error> {
         let mut rdr = self.get_rdr()?;
         let mut records: Vec<Record> = rdr.deserialize().map(|r| r.unwrap()).collect();
         if records

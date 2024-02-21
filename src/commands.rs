@@ -1,8 +1,7 @@
 use crate::Config;
-use chrono::{prelude::*, Duration, TimeDelta};
+use chrono::{prelude::*, TimeDelta};
 use clap::{Args, Subcommand};
 use std::str::FromStr;
-use toml::value::Time;
 
 use crate::execute::Execute;
 use crate::timesheet::{Record, Timesheet};
@@ -70,11 +69,41 @@ impl Execute for PunchDirection {
                 timesheet_manager.write_today_out(args.time.as_str(), break_minutes)?;
                 Ok(())
             }
-            PunchDirection::Stats(_) => todo!(),
-            PunchDirection::When => {
-                
-            },
+            PunchDirection::When => todo!(),
             PunchDirection::Print => todo!(),
+            PunchDirection::Stats(args) => {
+                println!("preparing working statistics...");
+                let date = match &args.month {
+                    Some(m) => chrono::Local::now()
+                        .with_month(m.parse().unwrap_or(1))
+                        .unwrap(),
+                    None => chrono::Local::now(),
+                };
+                println!("for month: {}", date.format("%B").to_string());
+
+                let timesheet_manager =
+                    Timesheet::new(config.app_path.join("timesheet.csv"), config);
+                let records: Vec<Record> = timesheet_manager.get_records().unwrap();
+                let mut total_hours: TimeDelta = chrono::TimeDelta::minutes(0);
+                let mut required_hours: TimeDelta = chrono::TimeDelta::minutes(0);
+                for record in records {
+                    if record.naive_date().month() == date.month() {
+                        total_hours += chrono::TimeDelta::minutes((record.hours * 60.) as i64);
+                        required_hours +=
+                            chrono::TimeDelta::minutes((record.workinghours * 60.) as i64)
+                    }
+                }
+                let diff = required_hours.num_minutes() as f64 / 60.
+                    - total_hours.num_minutes() as f64 / 60.;
+                println!(
+                    "{}/{} hours; diff -> {}h",
+                    total_hours.num_minutes() as f64 / 60.,
+                    required_hours.num_minutes() as f64 / 60.,
+                    diff
+                );
+
+                Ok(())
+            }
         }
     }
 }
