@@ -57,6 +57,17 @@ impl Timesheet {
         Ok(records)
     }
 
+    pub fn get_today(&self) -> Result<Record, anyhow::Error> {
+        let mut rdr = self.get_rdr()?;
+        let records: Vec<Record> = rdr.deserialize().map(|r| r.unwrap()).collect();
+        records
+            .into_iter()
+            .filter(|r| r.date == chrono::Local::now().date_naive().format("%F").to_string())
+            .next()
+            .map(|r| Ok(r))
+            .unwrap()
+    }
+
     fn get_rdr(&self) -> csv::Result<Reader<File>> {
         let rdr = ReaderBuilder::new()
             .has_headers(false)

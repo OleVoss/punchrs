@@ -1,6 +1,7 @@
 use crate::Config;
 use chrono::{prelude::*, TimeDelta};
 use clap::{Args, Subcommand};
+use core::time;
 use std::str::FromStr;
 
 use crate::timesheet::{Record, Timesheet};
@@ -70,7 +71,22 @@ impl Execute for PunchDirection {
                 timesheet_manager.write_today_out(args.time.as_str(), break_minutes)?;
                 Ok(())
             }
-            PunchDirection::When => todo!(),
+            PunchDirection::When => {
+                let break_min = config.break_min;
+                let timesheet_manager =
+                    Timesheet::new(config.app_path.join("timesheet.csv"), config);
+                let today = timesheet_manager.get_today()?;
+                let naive_time = chrono::NaiveTime::from_str(&today.in_time).unwrap();
+                println!(
+                    "You are working from {} to {}.",
+                    today.in_time,
+                    (naive_time
+                        + TimeDelta::hours(today.workinghours as i64)
+                        + TimeDelta::minutes(break_min as i64))
+                    .format("%H:%M")
+                );
+                Ok(())
+            }
             PunchDirection::Print => todo!(),
             PunchDirection::Stats(args) => {
                 println!("preparing working statistics...");
