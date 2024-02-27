@@ -8,8 +8,9 @@ use crossterm::{
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
-    style::Stylize,
-    widgets::{Block, Borders, List, Paragraph},
+    style::{Modifier, Stylize},
+    text::Text,
+    widgets::{Block, Borders, List, ListItem, Paragraph},
     CompletedFrame, Frame, Terminal,
 };
 
@@ -68,13 +69,8 @@ impl PunchrsApp {
             // main layout
             let layout_main = Layout::default()
                 .direction(Direction::Horizontal)
-                .constraints(vec![Constraint::Min(24), Constraint::Fill(10)])
+                .constraints(vec![Constraint::Min(26), Constraint::Fill(10)])
                 .split(layout_app[1]);
-
-            let layout_month = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints(vec![Constraint::Length(5), Constraint::Length(19)])
-                .split(layout_main[0]);
 
             // ## widgets #####################################
             // header
@@ -86,19 +82,17 @@ impl PunchrsApp {
             );
 
             // calender
-            frame.render_widget(
-                List::new([
-                    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov",
-                    "Dec",
-                ])
-                .block(Block::default().borders(Borders::ALL).title("Month")),
-                layout_month[0],
-            );
+            let items: Vec<ListItem> = [
+                "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+            ]
+            .into_iter()
+            .map(|i| ListItem::new(Text::from(i).alignment(Alignment::Center)))
+            .collect();
             frame.render_widget(
                 Paragraph::new("02 Mon 12.01.2024")
                     .alignment(Alignment::Center)
                     .block(Block::default().borders(Borders::ALL).title("Date")),
-                layout_month[1],
+                layout_main[0],
             );
 
             // stats
